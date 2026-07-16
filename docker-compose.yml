@@ -39,7 +39,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
-      - traefik.http.routers.dokploy-user-web.rule=Host(`${APP_DOMAIN:-dokploy-user.mercantec.tech}`)
+      - traefik.http.routers.dokploy-user-web.rule=Host(`${APP_DOMAIN:-dokployuser.mercantec.tech}`)
       - traefik.http.routers.dokploy-user-web.entrypoints=web
       - traefik.http.routers.dokploy-user-web.service=dokploy-user-web
       - traefik.http.services.dokploy-user-web.loadbalancer.server.port=8080

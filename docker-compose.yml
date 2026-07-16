@@ -19,7 +19,13 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -32,19 +38,19 @@ services:
     restart: unless-stopped
     depends_on:
       api:
-        condition: service_healthy
+        condition: service_started
     networks:
       - internal
       - dokploy-network
     labels:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
-      - traefik.http.routers.dokploy-user-web.rule=Host(`${APP_DOMAIN:-dokployuser.mercantec.tech}`)
+      - traefik.http.routers.dokploy-user-web.rule=Host(`dokploy-user.mercantec.tech`)
       - traefik.http.routers.dokploy-user-web.entrypoints=web
       - traefik.http.routers.dokploy-user-web.service=dokploy-user-web
       - traefik.http.services.dokploy-user-web.loadbalancer.server.port=8080
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
       interval: 15s
       timeout: 5s
       retries: 5

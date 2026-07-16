@@ -1,0 +1,57 @@
+# Dokploy-deploy: docker compose -f ./docker-compose.yml up -d --build
+#
+# Routing (samme mønster som øvrige Mercantec-apps):
+#   1. Cloudflare: *.mercantec.tech (wildcard CNAME → tunnel)
+#   2. Tunnel ingress: *.mercantec.tech → http://localhost:80
+#   3. Traefik (Dokploy): Host(`dokploy-user.mercantec.tech`) → web:8080
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      DOKPLOY_BASE_URL: ${DOKPLOY_BASE_URL:-https://deploy.mags.dk/api}
+      DOKPLOY_API_KEY: ${DOKPLOY_API_KEY:-}
+      DokployKey: ${DokployKey:-}
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.dokploy-user-web.rule=Host(`${APP_DOMAIN:-dokploy-user.mercantec.tech}`)
+      - traefik.http.routers.dokploy-user-web.entrypoints=web
+      - traefik.http.routers.dokploy-user-web.service=dokploy-user-web
+      - traefik.http.services.dokploy-user-web.loadbalancer.server.port=8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
+    driver: bridge
